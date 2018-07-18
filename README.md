@@ -41,8 +41,8 @@ These steps are described in the upcoming sections. The full implementation is a
 
 
 In order to calibrate the front facing camera, the calibration matrix and distortion coefficients should be retrieved using the given chessboard images. The OpenCV functions `findChessboardCorners()` and `drawChessboardCorners()` are used to identify the locations of corners on a set of chessboard images taken from different angles. At this point, we compute and return the camera calibration matrix and distortion coefficients.
-
-![alt-text-1](output_images/chessboard-corners.png "The detected chessboard corners")
+Chessboard-Corners.png
+![alt-text-1](output_images/Chessboard-Corners.png "The detected chessboard corners")
 
 
 ### Remove Distortion
@@ -54,26 +54,25 @@ Using the camera calibration matrix and distortion coefficients obtained from `c
 ### Edge Detection
 
 
-Identifying the lane lines can be done much more effiecently by considering different color spaces separately. To do that, I've convert the undistorted images to HLS color space to create binary thresholded images. After some testing, I found that the S channel did a fairly good job of identifying the white and yellow lane lines in the test images. 
+Identifying the lane lines can be done much more effeciently by considering different color spaces separately. To do that, I've converted the undistorted images to HLS color space to create binary thresholded images. After some testing, I found that the S channel did a fairly good job of identifying the white and yellow lane lines in the test images. 
 
-The conversion to HLS space was done by OpenCV `cvtColor()` function. Using OpenCV `sobel()` function, the gradient absolute value was calculated. Then, the gradient direction and magnitude  were applied to the iamge matrix. In the end, the S channel was exctracted from the HLS color space and a threshold was applied to it. Below are some examples where the edges are identified:
+The conversion to HLS space was done by OpenCV `cvtColor()` function. Using OpenCV `sobel()` function, the gradient absolute value was calculated. Then, the gradient direction and magnitude  were applied to the image matrix. In the end, the S channel was extracted from the HLS color space and a threshold was applied to it. Below are some examples where the edges are identified:
 
 ![alt-text-1](output_images/Edge-Detection.png "")
 
 
 ### Perspective Transformation
 
-To get a "birds eye view" of the road that focuses only on the lane lines, the OpenCV functions `getPerspectiveTransform()` and `warpPerspective()` were used. These functions take a matrix of four source points on the source and destination images to transform the perspective. The selection of these points on both source and destination points were done manually by looking at the locations of the lane lines on test images. Below are some of the test images that were transformed:
-Here's an example of the transformation:
+To get a "birds eye view" of the road that focuses only on the lane lines, the OpenCV functions `getPerspectiveTransform()` and `warpPerspective()` were used. These functions take a matrix of four points on the source and destination images to transform the perspective. The selection of these points on both source and destination images were done manually by looking at the locations of the lane lines on the test images. Below are some of the test images that were transformed:
 
 ![alt-text-1](output_images/Perspective-Transform.png "")
 
 ### Lane Detection Pipeline
 
 
-Now, to detect the lane lines, the transformed image were analyzed by using so-called "Peaks in a Histogram" method. In this method, the histogram of section of the image were processed to identify the peaks that represent the location of the lane lines. This was implemented in two classes:
+Now, to detect the lane lines, the transformed image were analyzed by using the so-called "Peaks in a Histogram" method. In this method, the histogram of section of the image were processed to identify the peaks that represent the location of the lane lines. This was implemented in two classes:
 
-* SlidingWindow: An SlidingWindow consists of the coordinates of a rectanglar window which is used to highlight the sections of the image in which there is a higher probability to find a lane line. 
+* SlidingWindow: It consists of the coordinates of a rectanglar window which is used to highlight the sections of the image in which there is a higher probability to find a lane line. 
 
 * LaneLine - Is used to keep the track of the left and right lane lines in the image. It also calculates the curvature radius as well as the camera distance from the center line. 
 
@@ -92,9 +91,9 @@ The output video can be found here: [project video](output_videos/project_video_
 
 ## Limitations of the pipeline
 
-The video pipeline performed well on the main project video, but as is clear in the [challenge video output](output_videos/challenge_video_output.mp4) or [harder challenge video output](output_videos/harder_challenge_video_output.mp4), the detection of the lane does not work well. That's possibly because of these reasons:
+The video pipeline performed well on the main project video, but as it is clear in the [challenge video output](output_videos/challenge_video_output.mp4) or [harder challenge video output](output_videos/harder_challenge_video_output.mp4), the detection of the lane does not work well. That's possibly because of these reasons:
 
-* The pipeline does not take the changes in the lighting into account well.
+* The pipeline does not take the changes in the lighting conditions into account well.
 * The car gets closer to the road sides
-* The bends are more steep, and the road has different characteristic
+* The bends are more steep, and the roads have different characteristics
 * The heavy shadow created by the concrete wall in the middle of the highway creates confusion for the pipeline
