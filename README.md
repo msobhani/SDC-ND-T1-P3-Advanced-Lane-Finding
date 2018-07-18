@@ -1,125 +1,100 @@
-# Behavioral Cloning Project
+# Advanced Lane Finding
 
 [![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
-Overview
+## Overview
 ---
-This repository contains starting files for the Behavioral Cloning Project.
 
-In this project, you will use what you've learned about deep neural networks and convolutional neural networks to clone driving behavior. You will train, validate and test a model using Keras. The model will output a steering angle to an autonomous vehicle.
+The goal of this project is to develop a software pipeline to identify the lane boundaries in a video. That includes:
 
-We have provided a simulator where you can steer a car around a track for data collection. You'll use image data and steering angles to train a neural network and then use this model to drive the car autonomously around the track.
+* Compute the camera calibration matrix and distortion coefficients given a set of chessboard images.
+* Apply a distortion correction to raw images.
+* Use color transforms, gradients, etc., to create a thresholded binary image.
+* Apply a perspective transform to rectify binary image ("birds-eye view").
+* Detect lane pixels and fit to find the lane boundary.
+* Determine the curvature of the lane and vehicle position with respect to center.
+* Warp the detected lane boundaries back onto the original image.
+* Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
 
-We also want you to create a detailed writeup of the project. Check out the [writeup template](https://github.com/udacity/CarND-Behavioral-Cloning-P3/blob/master/writeup_template.md) for this project and use it as a starting point for creating your own writeup. The writeup can be either a markdown file or a pdf document.
 
-To meet specifications, the project will require submitting five files: 
-* model.py (script used to create and train the model)
-* drive.py (script to drive the car - feel free to modify this file)
-* model.h5 (a trained Keras model)
-* a report writeup file (either markdown or pdf)
-* video.mp4 (a video recording of your vehicle driving autonomously around the track for at least one full lap)
+The project is submitted with the following structure: 
+* `Advanced-Lane-Finding.ipnyb` (The main code and test images)
+* `README.md` a report writeup file (markdown)
+* `output_videos/` (contains the generated videos resulted from the pipeline)
 
-This README file describes how to output the video in the "Details About Files In This Directory" section.
-
-Creating a Great Writeup
+## Implementation
 ---
-A great writeup should include the [rubric points](https://review.udacity.com/#!/rubrics/432/view) as well as your description of how you addressed each point.  You should include a detailed description of the code used (with line-number references and code snippets where necessary), and links to other supporting documents or external references.  You should include images in your writeup to demonstrate how your code works with examples.  
 
-All that said, please be concise!  We're not looking for you to write a book here, just a brief description of how you passed each rubric point, and references to the relevant code :). 
+The lane detection in a video stream is implemented as below:
 
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup.
+* Camera Calibration
+* Remove Distortion
+* Edge Detection
+* Perspective Transformation
+* Lane Detection
 
-The Project
----
-The goals / steps of this project are the following:
-* Use the simulator to collect data of good driving behavior 
-* Design, train and validate a model that predicts a steering angle from image data
-* Use the model to drive the vehicle autonomously around the first track in the simulator. The vehicle should remain on the road for an entire loop around the track.
-* Summarize the results with a written report
+![alt text](output_videos/project_video_output.gif "Result")
 
-### Dependencies
-This lab requires:
+These steps are described in the upcoming sections. The full implementation is available at [jupyter notebook](Advanced-Lane-Finding.ipynb)
 
-* [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit)
+### Camera Calibration
 
-The lab enviroment can be created with CarND Term1 Starter Kit. Click [here](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) for the details.
 
-The following resources can be found in this github repository:
-* drive.py
-* video.py
-* writeup_template.md
+In order to calibrate the front facing camera, the calibration matrix and distortion coefficients should be retrieved using the given chessboard images. The OpenCV functions `findChessboardCorners()` and `drawChessboardCorners()` are used to identify the locations of corners on a set of chessboard images taken from different angles. At this point, we compute and return the camera calibration matrix and distortion coefficients.
 
-The simulator can be downloaded from the classroom. In the classroom, we have also provided sample data that you can optionally use to help train your model.
+![alt-text-1](output_images/chessboard-corners.png "The detected chessboard corners")
 
-## Details About Files In This Directory
 
-### `drive.py`
+### Remove Distortion
 
-Usage of `drive.py` requires you have saved the trained model as an h5 file, i.e. `model.h5`. See the [Keras documentation](https://keras.io/getting-started/faq/#how-can-i-save-a-keras-model) for how to create this file using the following command:
-```sh
-model.save(filepath)
-```
+Using the camera calibration matrix and distortion coefficients obtained from `calibrate()`, the OpenCV function `undistort()` removes distortion from highway driving images.
 
-Once the model has been saved, it can be used with drive.py using this command:
+![alt-text-1](output_images/Chessboard-undistorted.png "")
 
-```sh
-python drive.py model.h5
-```
+### Edge Detection
 
-The above command will load the trained model and use the model to make predictions on individual images in real-time and send the predicted angle back to the server via a websocket connection.
 
-Note: There is known local system's setting issue with replacing "," with "." when using drive.py. When this happens it can make predicted steering values clipped to max/min values. If this occurs, a known fix for this is to add "export LANG=en_US.utf8" to the bashrc file.
+Identifying the lane lines can be done much more effiecently by considering different color spaces separately. To do that, I've convert the undistorted images to HLS color space to create binary thresholded images. After some testing, I found that the S channel did a fairly good job of identifying the white and yellow lane lines in the test images. 
 
-#### Saving a video of the autonomous agent
+The conversion to HLS space was done by OpenCV `cvtColor()` function. Using OpenCV `sobel()` function, the gradient absolute value was calculated. Then, the gradient direction and magnitude  were applied to the iamge matrix. In the end, the S channel was exctracted from the HLS color space and a threshold was applied to it. Below are some examples where the edges are identified:
 
-```sh
-python drive.py model.h5 run1
-```
+![alt-text-1](output_images/Edge-Detection.png "")
 
-The fourth argument, `run1`, is the directory in which to save the images seen by the agent. If the directory already exists, it'll be overwritten.
 
-```sh
-ls run1
+### Perspective Transformation
 
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_424.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_451.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_477.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_528.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_573.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_618.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_697.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_723.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_749.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_817.jpg
-...
-```
+To get a "birds eye view" of the road that focuses only on the lane lines, the OpenCV functions `getPerspectiveTransform()` and `warpPerspective()` were used. These functions take a matrix of four source points on the source and destination images to transform the perspective. The selection of these points on both source and destination points were done manually by looking at the locations of the lane lines on test images. Below are some of the test images that were transformed:
+Here's an example of the transformation:
 
-The image file name is a timestamp of when the image was seen. This information is used by `video.py` to create a chronological video of the agent driving.
+![alt-text-1](output_images/Perspective-Transform.png "")
 
-### `video.py`
+### Lane Detection Pipeline
 
-```sh
-python video.py run1
-```
 
-Creates a video based on images found in the `run1` directory. The name of the video will be the name of the directory followed by `'.mp4'`, so, in this case the video will be `run1.mp4`.
+Now, to detect the lane lines, the transformed image were analyzed by using so-called "Peaks in a Histogram" method. In this method, the histogram of section of the image were processed to identify the peaks that represent the location of the lane lines. This was implemented in two classes:
 
-Optionally, one can specify the FPS (frames per second) of the video:
+* SlidingWindow: An SlidingWindow consists of the coordinates of a rectanglar window which is used to highlight the sections of the image in which there is a higher probability to find a lane line. 
 
-```sh
-python video.py run1 --fps 48
-```
+* LaneLine - Is used to keep the track of the left and right lane lines in the image. It also calculates the curvature radius as well as the camera distance from the center line. 
 
-Will run the video at 48 FPS. The default FPS is 60.
+Below is an example of the lane lines detected:
 
-#### Why create a video
+![alt-text-1](output_images/Detected-Lane.png "")
 
-1. It's been noted the simulator might perform differently based on the hardware. So if your model drives succesfully on your machine it might not on another machine (your reviewer). Saving a video is a solid backup in case this happens.
-2. You could slightly alter the code in `drive.py` and/or `video.py` to create a video of what your model sees after the image is processed (may be helpful for debugging).
 
-### Tips
-- Please keep in mind that training images are loaded in BGR colorspace using cv2 while drive.py load images in RGB to predict the steering angles.
+The video processing pipeline takes the first image of the input video to initialize the calibration matrix and distortion coefficients to calibrate and undistort the video stream. Additionally, the histogram of the transformed first image is created. This histogram is then used to initialize the SlidingWindow instances for both left and right lane lines.
 
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+Finally, for each of the video frames, the edges are detected and the perspective transform is performed. Also the curvature radius and camera distance from the center line are calculated and converted to meters, which then will be printed in the output image.
 
+To read the project video in frames, and to output the detected lane markings the `moviepy` library is used.
+The output video can be found here: [project video](output_videos/project_video_output.mp4)
+
+
+## Limitations of the pipeline
+
+The video pipeline performed well on the main project video, but as is clear in the [challenge video output](output_videos/challenge_video_output.mp4) or [harder challenge video output](output_videos/harder_challenge_video_output.mp4), the detection of the lane does not work well. That's possibly because of these reasons:
+
+* The pipeline does not take the changes in the lighting into account well.
+* The car gets closer to the road sides
+* The bends are more steep, and the road has different characteristic
+* The heavy shadow created by the concrete wall in the middle of the highway creates confusion for the pipeline
